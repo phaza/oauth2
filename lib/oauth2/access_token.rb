@@ -94,8 +94,18 @@ module OAuth2
     # @param [Hash] opts the options to make the request with
     # @see Client#request
     def request(verb, path, opts={}, &block)
-      set_token(opts)
-      @client.request(verb, path, opts, &block)
+      retried = false
+      begin
+        set_token(opts)
+        @client.request(verb, path, opts, &block)
+      rescue OAuth2::Error => e
+        raise e if retried
+        
+        @token = refresh!.token
+        retried = true
+        retry
+        
+      end
     end
 
     # Make a GET request with the Access Token
